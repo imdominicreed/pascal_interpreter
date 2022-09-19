@@ -131,6 +131,7 @@ public class Parser
             case WHILE: stmtNode = parseWhileStatement(); break;
             case IF: stmtNode = parseIfStatement(); break;
             case FOR: stmtNode = parseForStatement(); break;
+            case CASE: stmtNode = parseCaseStatement(); break;
             
             default : syntaxError("Unexpected token");
         }
@@ -263,6 +264,56 @@ private Node parseAssignmentStatement()
 
     }
 
+
+
+    private Node parseConstant() {
+        Node constantNode = null;
+        if(currentToken.type == MINUS) {
+            constantNode = new Node(NEGATE);
+            currentToken = scanner.nextToken();
+        } else if(currentToken.type == PLUS) currentToken = scanner.nextToken();
+        if(currentToken.type == IDENTIFIER || currentToken.type == REAL || currentToken.type == INTEGER) {
+            Node numberNode;
+            if      (currentToken.type == IDENTIFIER) numberNode = parseVariable();
+            else if (currentToken.type == INTEGER)    numberNode = parseIntegerConstant();
+            else     numberNode = parseRealConstant();
+            if(constantNode == null) constantNode = numberNode;
+            else constantNode.adopt(numberNode);
+            return constantNode;
+        }
+
+        return parseStringConstant();
+
+    }
+
+    private Node parseConstantList() {
+        Node constantsNode = new Node(CONSTANT_LIST);
+        constantsNode.adopt(parseConstant());
+        while(currentToken.type != COLON) {
+            if(currentToken.type != COMMA) syntaxError("Expected ,");
+            currentToken = scanner.nextToken();
+            constantsNode.adopt(parseConstant());
+        }
+        currentToken = scanner.nextToken();
+        return constantsNode;
+    }
+
+
+    private Node parseCaseStatement() {
+        Node casesNode = new Node(CASES);
+        currentToken = scanner.nextToken();
+        casesNode.adopt(parseExpression());
+
+        if(currentToken.type != OF) syntaxError("Expecting OF");
+        currentToken = scanner.nextToken();
+        while(currentToken.type != END) {
+            casesNode.adopt(parseConstantList());
+            casesNode.adopt(parseStatement());
+            if(currentToken.type == SEMICOLON) currentToken = scanner.nextToken();
+        }
+        currentToken = scanner.nextToken();
+        return casesNode;
+    }
 
     private Node parseRepeatStatement()
     {

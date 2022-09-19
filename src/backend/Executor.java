@@ -9,6 +9,7 @@ package backend;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 
 import intermediate.*;
 import static intermediate.Node.NodeType.*;
@@ -54,6 +55,7 @@ public class Executor
             case LOOP : 
             case WRITE :
             case IF_STATEMENT:
+            case CASES:
             case WRITELN :  return visitStatement(node);
             
             case TEST:      return visitTest(node);
@@ -75,12 +77,13 @@ public class Executor
         
         switch (statementNode.type)
         {
-            case COMPOUND :  return visitCompound(statementNode);
-            case ASSIGN :    return visitAssign(statementNode);
-            case LOOP :      return visitLoop(statementNode);
-            case WRITE :     return visitWrite(statementNode);
-            case WRITELN :   return visitWriteln(statementNode);
-            case IF_STATEMENT:return visitIf(statementNode);
+            case COMPOUND :    return visitCompound(statementNode);
+            case ASSIGN :      return visitAssign(statementNode);
+            case LOOP :        return visitLoop(statementNode);
+            case WRITE :       return visitWrite(statementNode);
+            case WRITELN :     return visitWriteln(statementNode);
+            case IF_STATEMENT: return visitIf(statementNode);
+            case CASES:        return visitCase(statementNode);
             
             default :        return null;
         }
@@ -114,6 +117,26 @@ public class Executor
         SymtabEntry variableId = lhs.entry;
         variableId.setValue(value);
         
+        return null;
+    }
+
+    private Set<Object> visitConstantList(Node constantListNode) {
+        Set<Object> constants = new HashSet<>();
+        for(Node child : constantListNode.children) {
+            constants.add(visit(child));
+        }
+        return constants;
+    }
+
+    private Object visitCase(Node caseNode) {
+        Object value = visit(caseNode.children.get(0));
+        for(int i = 1; i < caseNode.children.size(); i += 2) {
+            Set<Object> constants = (Set<Object>) visitConstantList(caseNode.children.get(i));
+            if(constants.contains(value)) {
+                visit(caseNode.children.get(i+1));
+                return null;
+            }
+        }
         return null;
     }
     
