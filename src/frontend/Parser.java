@@ -130,6 +130,7 @@ public class Parser
             case SEMICOLON :  stmtNode = null; break;  // empty statement
             case WHILE: stmtNode = parseWhileStatement(); break;
             case IF: stmtNode = parseIfStatement(); break;
+            case FOR: stmtNode = parseForStatement(); break;
             
             default : syntaxError("Unexpected token");
         }
@@ -413,6 +414,50 @@ private Node parseAssignmentStatement()
         }
         
         return exprNode;
+    }
+
+    private Node parseForStatement() {
+        Node forNode = new Node(COMPOUND);
+        currentToken = scanner.nextToken();
+        forNode.adopt(parseAssignmentStatement());
+
+        if(currentToken.type != TO && currentToken.type != DOWNTO) syntaxError("Expected DOWNTO or TO");
+        boolean to = currentToken.type == TO;
+        currentToken = scanner.nextToken();
+        Node variable = forNode.children.get(0).children.get(0);
+        Node expression = parseExpression();
+        Node loopNode = new Node(LOOP);
+        Node testNode = new Node(TEST);
+
+        if(to) {
+            Node gt = new Node(GT);
+            gt.adopt(variable);
+            gt.adopt(expression);
+            testNode.adopt(gt);
+        } else {
+            Node lt = new Node(LT);
+            lt.adopt(variable);
+            lt.adopt(expression);
+            testNode.adopt(lt);
+        }
+        loopNode.adopt(testNode);
+        
+        if(currentToken.type != DO) syntaxError("Expected DO");
+        currentToken = scanner.nextToken();
+        loopNode.adopt(parseCompoundStatement());
+        Node assign = new Node(ASSIGN);
+        assign.adopt(variable);
+        Node addNode = new Node(ADD);
+        addNode.adopt(variable);
+        Node integerConstant = new Node(INTEGER_CONSTANT);
+        if(to) integerConstant.value = 1L;
+        else integerConstant.value = -1L;
+        addNode.adopt(integerConstant);
+        assign.adopt(addNode);
+        loopNode.adopt(assign);
+        forNode.adopt(loopNode);
+
+        return forNode;
     }
     
     private Node parseSimpleExpression()
